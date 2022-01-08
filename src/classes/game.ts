@@ -1,9 +1,8 @@
 import { Application, Texture, Container } from "pixi.js";
-import { Sound } from "@pixi/sound";
+import { Sound, sound } from "@pixi/sound";
 import { CRTFilter } from "@pixi/filter-crt";
-import { Player } from "./player";
+import { Player, Status } from "./player";
 import { ScoreBar } from "./score-bar";
-import { Sprite } from "./sprite";
 import { Direction } from "../enums/direction";
 
 import { Tile } from "./tile";
@@ -19,6 +18,8 @@ import { TileType } from "../enums/tile-type";
 
 import { tiles } from "../data/tiles";
 
+sound.volumeAll = 0.4;
+
 const bombAlert = Sound.from({
   url: "assets/bomb-alert.mp3",
   sprites: {
@@ -30,6 +31,16 @@ const bombAlert = Sound.from({
 });
 bombAlert.loop = true;
 
+const soundTick = Sound.from({
+  url: "assets/tick.mp3",
+});
+
+const soundCompleted = Sound.from({
+  url: "assets/level-completed.mp3",
+});
+
+soundCompleted.speed = 1.3;
+
 const carrot = Sound.from({
   url: "assets/carrot.mp3",
 });
@@ -39,26 +50,25 @@ function range(N: number) {
   return [...Array(N)].map((_, i) => i.toString(16)).join(" ");
 }
 
-function isSolid(material: TileType) {
-  return material & 0x01;
-}
-
 function delay(time: number) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
 
-const startLevel = 0;
+const startLevel = 1;
 const numLives = 4;
 
 export class Game {
   player: Player;
   level: Level | undefined;
   levelIndex = startLevel;
-  lives = numLives;
 
   scoreBar = new ScoreBar();
 
+  time: number = 0;
+  timeTimer?: NodeJS.Timer;
   numCarrots: number = 0;
+  lives = numLives;
+  score: number = 0;
 
   textures: Texture[] = [];
 
@@ -103,7 +113,13 @@ export class Game {
 
     const scoreBar = this.scoreBar;
 
-    scoreBar.update(this.numCarrots, this.lives, 0);
+    scoreBar.update({
+      score: this.score,
+      time: this.time,
+      carrots: this.numCarrots,
+      lives: this.lives,
+      bomb: 0,
+    });
 
     this.level = void 0;
 
@@ -116,16 +132,44 @@ export class Game {
       this.levelContainer.addChild(text);
       this.levelIndex = startLevel;
       this.lives = numLives;
+      this.score = 0;
     }
     await delay(2000);
 
-    this.levelContainer.removeChildren();
-    this.player.remove(this.levelContainer);
     this.nextLevel(this.levelIndex);
   }
 
   async nextLevel(levelIndex: number) {
     const player = this.player;
+    player.status = Status.STANDING;
+
+    this.levelContainer.removeChildren();
+    player.remove(this.levelContainer);
+
+    this.time = 375;
+    this.timeTimer && clearInterval(this.timeTimer);
+    this.timeTimer = setInterval(() => {
+      if (this.level) {
+        this.time--;
+
+        this.scoreBar.update({
+          score: this.score,
+          time: this.time,
+          carrots: this.numCarrots,
+          lives: this.lives,
+          bomb: 0,
+        });
+
+        if (this.time <= 30) {
+          soundTick.play();
+        }
+        if (this.time <= 0) {
+          this.timeTimer && clearInterval(this.timeTimer);
+          player.die(this.level);
+          this.handleDeath();
+        }
+      }
+    }, 1000);
 
     const levelNum = `${levelIndex + 1}`.padStart(2, "0");
     const str = `Level:${levelNum}`;
@@ -158,7 +202,13 @@ export class Game {
 
     this.numCarrots = level.numCarrots;
 
-    this.scoreBar.update(this.numCarrots, this.lives, 0);
+    this.scoreBar.update({
+      score: this.score,
+      time: this.time,
+      carrots: this.numCarrots,
+      lives: this.lives,
+      bomb: 0,
+    });
 
     return level;
   }
@@ -249,17 +299,19 @@ export class Game {
           const t = bombTime / 10000;
           bombAlert.speed = t * 1 + (1 - t) * 3.5;
 
-          this.scoreBar.update(
-            this.numCarrots,
-            this.lives,
-            Math.max(bombTime, 0),
-          );
           if (bombTime <= 0) {
             bombAlert.stop();
             bombEnd = 0;
-            player.explodeBomb(this.level);
-            // TODO: check if player is dead and call deadHandler if so.
+            player.explodeBomb(this);
           }
+
+          this.scoreBar.update({
+            score: this.score,
+            time: this.time,
+            carrots: this.numCarrots,
+            lives: this.lives,
+            bomb: Math.max(bombTime, 0),
+          });
         }
 
         const xtile = Math.floor((player.xpos + 8) / 16);
@@ -275,16 +327,25 @@ export class Game {
           this.numCarrots--;
           carrot.play();
 
-          this.scoreBar.update(this.numCarrots, this.lives, 0);
+          this.score += 450;
+
+          this.scoreBar.update({
+            score: this.score,
+            time: this.time,
+            carrots: this.numCarrots,
+            lives: this.lives,
+            bomb: 0,
+          });
 
           // If carrot counter == 0, level completed.
           if (this.numCarrots == 0) {
+            soundCompleted.play();
             this.level = await this.nextLevel(++this.levelIndex);
             return;
           }
         }
 
-        this.level.tick(player);
+        this.level.tick(this, player);
         player.tick(this, moving, lastDirection);
       }
     };

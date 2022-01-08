@@ -6,7 +6,7 @@ const fs = require("fs");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const ESLintPlugin = require("eslint-webpack-plugin");
+// const ESLintPlugin = require("eslint-webpack-plugin");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pkg = JSON.parse(
   fs.readFileSync(path.join(__dirname, "package.json"), "utf-8"),
@@ -68,12 +68,14 @@ module.exports = (env) => {
         VERSION: JSON.stringify(pkg.version + "r"),
       }),
 
+      /*
       new ESLintPlugin({
         emitError: true,
         emitWarning: true,
         failOnError: true,
         failOnWarning: true,
       }),
+      */
 
       new webpack.ProgressPlugin(),
     ],

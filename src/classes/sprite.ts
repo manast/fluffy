@@ -148,10 +148,10 @@ export class Sprite {
     }
   }
 
-  moveTo(x: number, y: number, step: number) {
+  moveTo(x: number, y?: number, step?: number) {
     // Get next direction
     const deltaX = x - this.xpos;
-    const deltaY = y - this.ypos;
+    const deltaY = typeof y !== "undefined" ? y - this.ypos : 0;
 
     const direction =
       deltaX > 0
@@ -166,7 +166,7 @@ export class Sprite {
 
     this.move(direction, step);
 
-    return this.xpos == x && this.ypos == y;
+    return this.xpos == x && (typeof y === "undefined" || this.ypos == y);
   }
 
   checkCollision(sprite: Sprite) {

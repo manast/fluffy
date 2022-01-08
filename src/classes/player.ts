@@ -64,7 +64,7 @@ const fluffy = [
   00 00 00 00 00 00 00 00`,
 ];
 
-enum Status {
+export enum Status {
   IN_ROPE,
   GOING_TO_ROPE,
   INSIDE_PIPE,
@@ -94,11 +94,10 @@ export class Player extends Sprite {
 
   status: Status = Status.STANDING;
 
-  falling = false;
   goingToRope = false;
 
   fallCoord = 0;
-  dstPos: { x: number; y: number } | undefined;
+  dstPos: { x: number; y?: number } | undefined;
 
   constructor(bombTexture: Texture) {
     super({
@@ -175,14 +174,12 @@ export class Player extends Sprite {
       this.bombPos.x = this.xpos;
       this.bombPos.y = this.ypos;
     }
+
+    // Hack for elevator
     if (this.elevator) {
       this.ypos = Math.floor(this.ypos);
-      // super.move(direction, 16);
+      super.move(direction, 16);
       this.elevator = void 0;
-      this.dstPos = {
-        x: this.xpos + (direction === Direction.RIGHT ? 16 : -16),
-        y: this.ypos,
-      };
     } else {
       super.move(direction, steps);
     }
@@ -253,6 +250,7 @@ export class Player extends Sprite {
         this.bomb.pixiSprite.visible = true;
       }
 
+      // TODO: Move to after checking if we died from falling
       if (floorType == TileType.RIGHT_BELT) {
         this.stop();
         this.set(xpos + 1, ypos);
@@ -292,8 +290,8 @@ export class Player extends Sprite {
           }
         } else {
           // Starts falling
-          if (!this.falling) {
-            this.falling = true;
+          if (this.status !== Status.FALLING) {
+            this.status = Status.FALLING;
             this.fallCoord = ypos + level.yroom * 16 * 11;
             this.alignHorizTiles();
           } else {
@@ -303,8 +301,8 @@ export class Player extends Sprite {
           return;
         }
       } else {
-        if (this.falling) {
-          this.falling = false;
+        if (this.status === Status.FALLING) {
+          this.status = Status.STANDING;
           if (floorType === TileType.TRAMPOLINE) {
             this.status = Status.BOUNCING;
             this.set(xpos, ypos - 1);
@@ -341,19 +339,11 @@ export class Player extends Sprite {
             // If we are in a ROPE we must leave the rope
             if (this.status == Status.IN_ROPE) {
               this.status = Status.STANDING;
-              if (direction === Direction.RIGHT) {
-                this.dstPos = {
-                  x: xpos + 16,
-                  y: ypos,
-                };
-                return;
-              } else if (direction === Direction.LEFT) {
-                this.dstPos = {
-                  x: xpos - 16,
-                  y: ypos,
-                };
-                return;
-              }
+              this.dstPos = {
+                x: xpos + (direction === Direction.RIGHT ? 16 : -16),
+                y: ypos,
+              };
+              return;
             }
             this.move(direction);
           } else {
@@ -413,59 +403,64 @@ export class Player extends Sprite {
 
   // Currently when the bomb explodes in a room different from the one we are
   // viewing it is not played correctly.
-  explodeBomb(level: Level) {
-    // Run animations and play explosion sound
-    let x = Math.floor((this.bombPos.x + 8) / 16) - 1;
-    let y = Math.floor(this.bombPos.y / 16);
+  explodeBomb(game: Game) {
+    if (game.level) {
+      const level = game.level;
+      // Run animations and play explosion sound
+      let x = Math.floor((this.bombPos.x + 8) / 16) - 1;
+      let y = Math.floor(this.bombPos.y / 16);
 
-    this.bombAnimations.visible = true;
-    this.bombAnimations.children.forEach((animation) => {
-      const { material, room, tileIndex } = level.getTileMaterial(
-        x,
-        y,
-        this.bombRoom,
-      );
-      if (material == TileType.WALL || material == TileType.BOMB_ACTIVE) {
-        room.replaceTile(tileIndex, 0x00);
-      }
+      this.bombAnimations.visible = true;
+      this.bombAnimations.children.forEach((animation) => {
+        const { material, room, tileIndex } = level.getTileMaterial(
+          x,
+          y,
+          this.bombRoom,
+        );
+        if (material == TileType.WALL || material == TileType.BOMB_ACTIVE) {
+          room.replaceTile(tileIndex, 0x00);
+        }
 
-      (<TileAnimation>animation).start({ x, y });
+        (<TileAnimation>animation).start({ x, y });
 
-      bombExplosion.play();
+        bombExplosion.play();
 
-      const x0 = x * 16 - 15;
-      const x1 = x * 16;
-      const y0 = this.bombPos.y - 2;
-      const y1 = this.bombPos.y + 18;
+        const x0 = x * 16 - 15;
+        const x1 = x * 16;
+        const y0 = this.bombPos.y - 2;
+        const y1 = this.bombPos.y + 18;
 
-      x += 1;
+        x += 1;
 
-      if (room.parrots) {
-        // Check if any parrot must die
-        room.parrots.forEach((parrot) => {
-          if (
-            parrot.xpos >= x0 &&
-            parrot.xpos <= x1 &&
-            parrot.ypos >= y0 &&
-            parrot.ypos <= y1
-          ) {
-            parrot.die(level);
-          }
-        });
-      }
+        if (room.parrots) {
+          // Check if any parrot must die
+          room.parrots.forEach((parrot) => {
+            if (
+              parrot.xpos >= x0 &&
+              parrot.xpos <= x1 &&
+              parrot.ypos >= y0 &&
+              parrot.ypos <= y1
+            ) {
+              game.score += 1500;
+              parrot.die(level);
+            }
+          });
+        }
 
-      // Check if player must die
-      if (
-        this.xpos >= x0 &&
-        this.xpos < x1 &&
-        this.ypos > y0 &&
-        this.ypos < y1
-      ) {
-        this.die(level);
-      }
-    });
+        // Check if player must die
+        if (
+          this.xpos >= x0 &&
+          this.xpos < x1 &&
+          this.ypos > y0 &&
+          this.ypos < y1
+        ) {
+          this.die(level);
+          game.handleDeath();
+        }
+      });
 
-    this.bombTile.visible = false;
+      this.bombTile.visible = false;
+    }
   }
 
   die(level: Level) {

@@ -141,9 +141,21 @@ export class ScoreBar {
     i += this.lives.text.length + 1;
   }
 
-  update(carrots: number, lives: number, bomb: number) {
-    this.score.update("123456");
-    this.time.update("375");
+  update({
+    score,
+    time,
+    carrots,
+    lives,
+    bomb,
+  }: {
+    score: number;
+    time: number;
+    carrots: number;
+    lives: number;
+    bomb: number;
+  }) {
+    this.score.update(`${score}`.padStart(6, "0"));
+    this.time.update(`${time}`.padStart(3, "0"));
     this.lives.update(`${lives}`);
     this.bomb.update(`${Math.round(bomb / 100)}`.padStart(2, "0"));
     this.carrots.update(`${carrots}`.padStart(2, "0"));

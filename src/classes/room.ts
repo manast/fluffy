@@ -3,8 +3,7 @@ import { TileType } from "../enums/tile-type";
 import { Elevator } from "./elevator";
 import { Player } from "./player";
 import { Parrot } from "./parrot";
-import { Level } from "./level";
-import { Direction } from "../enums/direction";
+import { Game } from "./game";
 
 const width = 16;
 const height = 11;
@@ -54,64 +53,31 @@ export class Room {
     }
   }
 
-  tick(level: Level, player: Player) {
+  tick(game: Game, player: Player) {
     if (this.elevators) {
-      this.elevators.forEach((elevator) => elevator.tick(player));
-    }
-    if (this.parrots) {
-      const parrots = this.parrots.filter((parrot) => !parrot.dead);
-      parrots.forEach((parrot) => parrot.tick());
-
-      // Detect Collission with player
-      const contact = parrots.some((parrot) => parrot.checkCollision(player));
-
-      if (contact) {
-        player.die(level);
+      const elevators = this.elevators;
+      for (let i = 0; i < elevators.length; i++) {
+        elevators[i].tick(player);
       }
     }
-  }
+    if (this.parrots) {
+      const parrots = this.parrots;
+      let contact = false;
+      for (let i = 0; i < parrots.length; i++) {
+        const parrot = parrots[i];
+        if (!parrot.dead) {
+          parrot.tick();
+          if (!contact) {
+            // Detect Collision with player
+            contact = parrot.checkCollision(player);
+          }
+        }
+      }
 
-  private updateParrot(parrot: {
-    pos: {
-      x: number;
-      y: number;
-    };
-    stepIndex: number;
-    steps: number[];
-    sprite: Parrot;
-  }) {
-    // Get current step index.
-    let { stepIndex: index } = parrot;
-
-    // Get current pos
-    const cx = parrot.steps[index] & 0xf0;
-    const cy = (parrot.steps[index] & 0x0f) << 4;
-
-    // Get next pos
-    index = (index + 1) % parrot.steps.length;
-    const nx = parrot.steps[index] & 0xf0;
-    const ny = (parrot.steps[index] & 0x0f) << 4;
-
-    // Get next direction
-    const deltaX = nx - cx;
-    const deltaY = ny - cy;
-
-    const direction =
-      deltaX > 0
-        ? Direction.RIGHT
-        : deltaX < 0
-        ? Direction.LEFT
-        : deltaY > 0
-        ? Direction.DOWN
-        : Direction.UP;
-
-    // Move
-    const stepSize = 1;
-    parrot.sprite.move(direction, stepSize);
-
-    // increase step index mod steps legth
-    if (parrot.sprite.xpos == nx && parrot.sprite.ypos == ny) {
-      parrot.stepIndex = (parrot.stepIndex + 1) % parrot.steps.length;
+      if (contact && game.level) {
+        // player.die(game.level);
+        game.handleDeath();
+      }
     }
   }
 

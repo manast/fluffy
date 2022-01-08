@@ -3,6 +3,7 @@ import { Sprite } from "./sprite";
 import { Texture, Container } from "pixi.js";
 import { tileMapping } from "../data/levels";
 import { Player } from "./player";
+import { Game } from "./game";
 
 // Levels are hardcoded to 2x2 views (screens)
 const width = 2;
@@ -81,7 +82,7 @@ export class Level {
     container.removeChild(this.container);
   }
 
-  tick(player: Player) {
+  tick(game: Game, player: Player) {
     let { xpos, ypos } = this.player;
 
     if (xpos >= 16 * 16) {
@@ -109,7 +110,7 @@ export class Level {
       this.player.set(xpos, ypos);
     }
 
-    this.currentRoom.tick(this, player);
+    this.currentRoom.tick(game, player);
   }
 
   getRoom(x: number, y: number) {

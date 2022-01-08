@@ -54,7 +54,7 @@ function delay(time: number) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
 
-const startLevel = 1;
+const startLevel = 0;
 const numLives = 4;
 
 export class Game {

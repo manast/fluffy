@@ -14,11 +14,17 @@ export interface ElevatorData {
   end: { x: number; y: number };
 }
 
+export interface ParrotData {
+  room: number;
+  steps: number[];
+}
+
 export interface LevelData {
   rooms: string[];
   startPos: { x: number; y: number };
   startRoom: { x: number; y: number };
   elevators?: ElevatorData[];
+  parrots?: ParrotData[];
 }
 /**
  * Levels are composed of 4 different adjacent views arranged in 2x2.
@@ -45,6 +51,9 @@ export class Level {
           textures,
           room,
           level.elevators?.filter((elevator) => elevator.room === index),
+          level.parrots
+            ?.filter((parrot) => parrot.room === index)
+            .map((parrot) => parrot.steps),
         ),
     );
     this.container = new Container();
@@ -54,8 +63,8 @@ export class Level {
       0,
     );
 
-    this.xroom = level.startRoom.x; // Math.floor(initPos.x / 16);
-    this.yroom = level.startRoom.y; // Math.floor(initPos.y / 16);
+    this.xroom = level.startRoom.x;
+    this.yroom = level.startRoom.y;
     const index = this.yroom * width + this.xroom;
 
     this.currentRoom = this.rooms[index];
@@ -100,7 +109,7 @@ export class Level {
       this.player.set(xpos, ypos);
     }
 
-    this.currentRoom.tick(player);
+    this.currentRoom.tick(this, player);
   }
 
   getRoom(x: number, y: number) {
@@ -111,8 +120,8 @@ export class Level {
     return this.rooms[index];
   }
 
-  getTileMaterial(x: number, y: number) {
-    const room = this.getRoom(x, y);
+  getTileMaterial(x: number, y: number, room?: Room) {
+    room = room ? room : this.getRoom(x, y);
 
     if (x < 0) {
       x += 16;

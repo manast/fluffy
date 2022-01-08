@@ -36,6 +36,10 @@ module.exports = (env) => {
             },
           },
         },
+        {
+          test: /\.glsl$/,
+          loader: "webpack-glsl",
+        },
       ],
     },
     output: {

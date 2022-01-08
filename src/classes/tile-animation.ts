@@ -11,37 +11,38 @@ import { Tile } from "./tile";
  * to simulate the constraints of a MSX.
  *
  */
-export class TileAnimation {
-  private sprite: AnimatedSprite;
-
+export class TileAnimation extends AnimatedSprite {
   constructor(tileIndexes: number[]) {
     const frames = tileIndexes.map((index) => new Tile(tiles[index]));
 
-    this.sprite = new AnimatedSprite(frames.map((frame) => frame.texture));
+    super(frames.map((frame) => frame.texture));
 
-    this.sprite.loop = false;
-    this.sprite.animationSpeed = 0.2;
-    this.sprite.visible = false;
+    this.loop = false;
+    this.animationSpeed = 0.2;
+    this.visible = false;
   }
 
   add(container: Container) {
-    container.addChild(this.sprite);
+    container.addChild(this);
   }
 
   remove(container: Container) {
-    container.removeChild(this.sprite);
+    container.removeChild(this);
   }
 
-  play({ x, y }: { x: number; y: number }, keepLast = false) {
-    this.sprite.gotoAndStop(0);
-    this.sprite.position.set(x * 16, y * 16);
-    this.sprite.visible = true;
-    this.sprite.play();
-    this.sprite.onComplete = () => {
-      this.sprite.onComplete = void 0;
-      if (!keepLast) {
-        this.sprite.visible = false;
-      }
-    };
+  start({ x, y }: { x: number; y: number }, keepLast = false) {
+    this.gotoAndStop(0);
+    this.position.set(x * 16, y * 16);
+    this.visible = true;
+    super.play();
+
+    return new Promise<void>((resolve) => {
+      this.onComplete = () => {
+        this.onComplete = void 0;
+        if (!keepLast) {
+          this.visible = false;
+        }
+      };
+    });
   }
 }

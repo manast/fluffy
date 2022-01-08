@@ -1,4 +1,4 @@
-import { Texture, Container, AnimatedSprite } from "pixi.js";
+import { Texture, Container, AnimatedSprite, FORMATS } from "pixi.js";
 import { MSXPalette } from "../data/palette";
 import { Direction } from "../enums/direction";
 
@@ -99,11 +99,17 @@ export class Sprite {
       );
     }
 
-    return Texture.fromBuffer(rawPixels, 16, 16);
+    return Texture.fromBuffer(rawPixels, 16, 16, {
+      format: FORMATS.RGBA,
+    });
   }
 
   add(container: Container) {
     container.addChild(this.container);
+  }
+
+  remove(container: Container) {
+    container.removeChild(this.container);
   }
 
   set(x: number, y: number) {
@@ -113,8 +119,12 @@ export class Sprite {
   }
 
   move(direction: Direction, steps?: number) {
-    steps = steps || 1;
-    if (this.pixiSprite.textures !== this.textures[direction]) {
+    steps = typeof steps === "undefined" ? 1 : steps;
+    if (
+      this.pixiSprite.textures !== this.textures[direction] &&
+      direction &&
+      direction !== Direction.NONE
+    ) {
       this.pixiSprite.textures = this.textures[direction];
     }
 
@@ -136,6 +146,35 @@ export class Sprite {
         this.set(this.xpos, this.ypos + steps);
         break;
     }
+  }
+
+  moveTo(x: number, y: number, step: number) {
+    // Get next direction
+    const deltaX = x - this.xpos;
+    const deltaY = y - this.ypos;
+
+    const direction =
+      deltaX > 0
+        ? Direction.RIGHT
+        : deltaX < 0
+        ? Direction.LEFT
+        : deltaY > 0
+        ? Direction.DOWN
+        : deltaY < 0
+        ? Direction.UP
+        : Direction.NONE;
+
+    this.move(direction, step);
+
+    return this.xpos == x && this.ypos == y;
+  }
+
+  checkCollision(sprite: Sprite) {
+    const dx = sprite.xpos - this.xpos;
+    const dy = sprite.ypos - this.ypos;
+
+    const len = Math.sqrt(dx * dx + dy * dy);
+    return len < 12;
   }
 
   stop() {

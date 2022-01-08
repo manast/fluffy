@@ -21,9 +21,10 @@ window.onload = async (): Promise<void> => {
 
   resizeCanvas();
 
-  const game = new Game(app);
-
   app.stage.interactive = true;
+
+  const game = new Game(app);
+  await game.start();
 };
 
 function resizeCanvas(): void {

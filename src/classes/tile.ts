@@ -1,4 +1,4 @@
-import { Texture } from "pixi.js";
+import { Texture, FORMATS } from "pixi.js";
 import { MSXPalette } from "../data/palette";
 
 const width = 16;
@@ -45,6 +45,8 @@ export class Tile {
     }
 
     // RGBA
-    return Texture.fromBuffer(new Uint8Array(buffer.buffer), 16, 16);
+    return Texture.fromBuffer(new Uint8Array(buffer.buffer), 16, 16, {
+      format: FORMATS.RGBA,
+    });
   }
 }

@@ -13,12 +13,12 @@ import { Game } from "./game";
 import { Sound } from "@pixi/sound";
 
 const bombExplosion = Sound.from({
-  url: "assets/bomb-explosion.wav",
+  url: "assets/bomb-explosion.mp3",
 });
 bombExplosion.loop = false;
 
 const blood = Sound.from({
-  url: "assets/blood.wav",
+  url: "assets/blood.mp3",
 });
 blood.loop = false;
 

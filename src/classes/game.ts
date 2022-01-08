@@ -20,7 +20,7 @@ import { TileType } from "../enums/tile-type";
 import { tiles } from "../data/tiles";
 
 const bombAlert = Sound.from({
-  url: "assets/bomb-alert.wav",
+  url: "assets/bomb-alert.mp3",
   sprites: {
     alert: {
       start: 0,
@@ -31,7 +31,7 @@ const bombAlert = Sound.from({
 bombAlert.loop = true;
 
 const carrot = Sound.from({
-  url: "assets/carrot.wav",
+  url: "assets/carrot.mp3",
 });
 carrot.loop = false;
 

@@ -285,6 +285,7 @@ export class Game {
 
           this.scoreBar.update({
             carrots: this.numCarrots,
+            score: this.score,
           });
 
           // If carrot counter == 0, level completed.

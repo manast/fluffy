@@ -533,6 +533,9 @@ export class Player extends Sprite {
           )
         ) {
           game.score += 1500;
+          game.scoreBar.update({
+            score: game.score,
+          });
           parrot.die(level);
         }
       });

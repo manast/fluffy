@@ -130,7 +130,7 @@ export class Game {
     this.levelContainer.removeChildren();
     player.remove(this.levelContainer);
 
-    this.time = 375;
+    this.time = 349;
     this.timeTimer && clearInterval(this.timeTimer);
     this.timeTimer = setInterval(() => {
       if (this.level) {

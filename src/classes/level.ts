@@ -41,6 +41,11 @@ export class Level {
 
   container: Container;
 
+  startPos: {
+    x: number;
+    y: number;
+  };
+
   constructor(
     private textures: Texture[],
     private player: Sprite,
@@ -49,6 +54,7 @@ export class Level {
     this.rooms = level.rooms.map(
       (room, index) =>
         new Room(
+          index,
           textures,
           room,
           level.elevators?.filter((elevator) => elevator.room === index),
@@ -71,7 +77,7 @@ export class Level {
     this.currentRoom = this.rooms[index];
     this.currentRoom.addLevel(this.container);
 
-    player.set(level.startPos.x, level.startPos.y);
+    this.startPos = level.startPos;
   }
 
   add(container: Container) {
@@ -136,6 +142,40 @@ export class Level {
       material: tileMapping[room.tiles[tileIndex]],
       room,
       tileIndex,
+    };
+  }
+
+  /**
+   * Returns the material and the room for the tile in the level, given in
+   * absolute level tile coordinates.
+   *
+   * @param x
+   * @param y
+   */
+  getTileMaterialAbs(x: number, y: number) {
+    const { room, xRoom, yRoom } = this.getRoomAbs(x, y);
+
+    x -= xRoom * 16;
+    y -= yRoom * 11;
+
+    const tileIndex = (y % 11) * 16 + (x % 16);
+
+    return {
+      material: tileMapping[room.tiles[tileIndex]],
+      room,
+      tileIndex,
+    };
+  }
+
+  getRoomAbs(x: number, y: number) {
+    const xRoom = Math.floor(x / 16);
+    const yRoom = Math.floor(y / 11);
+
+    const index = yRoom * height + xRoom;
+    return {
+      room: this.rooms[index],
+      xRoom,
+      yRoom,
     };
   }
 }

@@ -148,16 +148,18 @@ export class ScoreBar {
     lives,
     bomb,
   }: {
-    score: number;
-    time: number;
-    carrots: number;
-    lives: number;
-    bomb: number;
+    score?: number;
+    time?: number;
+    carrots?: number;
+    lives?: number;
+    bomb?: number;
   }) {
-    this.score.update(`${score}`.padStart(6, "0"));
-    this.time.update(`${time}`.padStart(3, "0"));
-    this.lives.update(`${lives}`);
-    this.bomb.update(`${Math.round(bomb / 100)}`.padStart(2, "0"));
-    this.carrots.update(`${carrots}`.padStart(2, "0"));
+    score && this.score.update(`${score}`.padStart(6, "0"));
+    time && this.time.update(`${time}`.padStart(3, "0"));
+    lives && this.lives.update(`${lives}`);
+    if (typeof bomb !== "undefined") {
+      this.bomb.update(`${Math.round(bomb / 100)}`.padStart(2, "0"));
+    }
+    carrots && this.carrots.update(`${carrots}`.padStart(2, "0"));
   }
 }

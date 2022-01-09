@@ -17,8 +17,11 @@ export class Room {
   elevators: Elevator[] | undefined;
   container: Container = new Container();
   parrots: Parrot[] | undefined;
+  x: number = 0;
+  y: number = 0;
 
   constructor(
+    public index: number, // Hacky index to know where this room is located in the level.
     private textures: Texture[],
     data: string,
     elevators?: {

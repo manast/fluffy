@@ -12,6 +12,10 @@ import { Game } from "./game";
 
 import { Sound } from "@pixi/sound";
 
+// Some constants
+const levelHeight = 2; // In rooms
+
+// Sounds
 const bombExplosion = Sound.from({
   url: "assets/bomb-explosion.mp3",
 });
@@ -21,6 +25,17 @@ const blood = Sound.from({
   url: "assets/blood.mp3",
 });
 blood.loop = false;
+
+const bombAlert = Sound.from({
+  url: "assets/bomb-alert.mp3",
+  sprites: {
+    alert: {
+      start: 0,
+      end: 12,
+    },
+  },
+});
+bombAlert.loop = true;
 
 const fluffy = [
   `0A 21 0B 17 9F 2F 5F 2F
@@ -83,6 +98,7 @@ export class Player extends Sprite {
   deadFallAnimationRope: TileAnimation;
 
   hasBomb = false;
+  bombEnd: number = 0;
   bombPos: { x: number; y: number } = { x: 0, y: 0 };
   bombRoom: Room | undefined;
   elevator: Elevator | undefined;
@@ -156,6 +172,14 @@ export class Player extends Sprite {
     this.bombTile = PixiSprite.from(bombTexture);
   }
 
+  // Start player in a level
+  start(level: Level) {
+    this.pixiSprite.visible = true;
+    this.status = Status.STANDING;
+    this.bomb.pixiSprite.visible = false;
+    this.set(level.startPos.x, level.startPos.y);
+  }
+
   add(container: Container) {
     super.add(container);
     container.addChild(this.animationsContainer);
@@ -196,7 +220,30 @@ export class Player extends Sprite {
     }
   }
 
+  cleanBomb() {
+    this.bombEnd = 0;
+    this.hasBomb = false;
+    bombAlert.stop();
+  }
+
   async tick(game: Game, direction?: Direction, lastDirection?: Direction) {
+    const { bombEnd } = this;
+    if (this.bombEnd) {
+      const bombTime = bombEnd - Date.now();
+      const t = bombTime / 10000;
+      bombAlert.speed = t * 1 + (1 - t) * 3.5;
+
+      if (bombTime <= 0) {
+        bombAlert.stop();
+        this.bombEnd = 0;
+        this.explodeBomb(game);
+      }
+
+      game.scoreBar.update({
+        bomb: Math.max(bombTime, 0),
+      });
+    }
+
     if (this.dstPos) {
       if (this.moveTo(this.dstPos.x, this.dstPos.y, 1)) {
         this.dstPos = void 0;
@@ -377,11 +424,18 @@ export class Player extends Sprite {
     }
   }
 
-  grabBomb() {
+  grabBomb(bombTime: number) {
     this.hasBomb = true;
     this.bombPos.x = this.xpos;
     this.bombPos.y = this.ypos;
     this.bomb.add(this.container);
+
+    this.bomb.pixiSprite.visible = true;
+
+    bombAlert.play("alert");
+
+    this.bombRoom = void 0;
+    this.bombEnd = Date.now() + bombTime;
   }
 
   dropBomb(room: Room) {
@@ -404,62 +458,84 @@ export class Player extends Sprite {
   // Currently when the bomb explodes in a room different from the one we are
   // viewing it is not played correctly.
   explodeBomb(game: Game) {
-    if (game.level) {
+    const bombRoom = this.bombRoom || game.level?.currentRoom;
+    if (game.level && bombRoom) {
       const level = game.level;
+
+      // Get current visible room coords
+      const { xroom, yroom } = level;
+
+      // Get bomb's room coordinates
+      const byRoom = Math.floor(bombRoom.index / levelHeight);
+      const bxRoom = bombRoom.index - byRoom * levelHeight;
+
       // Run animations and play explosion sound
-      let x = Math.floor((this.bombPos.x + 8) / 16) - 1;
-      let y = Math.floor(this.bombPos.y / 16);
+      let x = Math.floor((this.bombPos.x + 8) / 16) + 16 * bxRoom - 1;
+      let y = Math.floor(this.bombPos.y / 16) + 11 * byRoom;
+
+      // Get bomb explosion area in Level coordinates
+      const x0 = x * 16;
+      const x1 = (x + 2) * 16 + 15;
+
+      const y0 = y * 16;
+      const y1 = y0 + 15;
+
+      function checkBombCollision(x: number, y: number) {
+        const px0 = x;
+        const px1 = px0 + 15;
+        const py0 = y;
+        const py1 = py0 + 15;
+        return (
+          ((px0 >= x0 && px0 < x1) || (px1 >= x0 && px1 < x1)) &&
+          ((py0 >= y0 && py0 < y1) || (py1 >= y0 && py1 < y1))
+        );
+      }
 
       this.bombAnimations.visible = true;
       this.bombAnimations.children.forEach((animation) => {
-        const { material, room, tileIndex } = level.getTileMaterial(
-          x,
-          y,
-          this.bombRoom,
-        );
+        const { material, room, tileIndex } = level.getTileMaterialAbs(x, y);
         if (material == TileType.WALL || material == TileType.BOMB_ACTIVE) {
           room.replaceTile(tileIndex, 0x00);
         }
 
-        (<TileAnimation>animation).start({ x, y });
+        // Transform animation coords to current room
+        const tx = x - xroom * 16;
+        const ty = y - yroom * 11;
 
-        bombExplosion.play();
-
-        const x0 = x * 16 - 15;
-        const x1 = x * 16;
-        const y0 = this.bombPos.y - 2;
-        const y1 = this.bombPos.y + 18;
-
-        x += 1;
-
-        if (room.parrots) {
-          // Check if any parrot must die
-          room.parrots.forEach((parrot) => {
-            if (
-              parrot.xpos >= x0 &&
-              parrot.xpos <= x1 &&
-              parrot.ypos >= y0 &&
-              parrot.ypos <= y1
-            ) {
-              game.score += 1500;
-              parrot.die(level);
-            }
-          });
+        // Check if the animation should be visible
+        if (tx >= 0 && tx < 16 && ty >= 0 && ty < 11) {
+          (<TileAnimation>animation).start({ x: tx, y: ty });
         }
-
-        // Check if player must die
-        if (
-          this.xpos >= x0 &&
-          this.xpos < x1 &&
-          this.ypos > y0 &&
-          this.ypos < y1
-        ) {
-          this.die(level);
-          game.handleDeath();
-        }
+        x++;
       });
 
       this.bombTile.visible = false;
+      bombExplosion.play();
+
+      // Check if player must die
+      if (
+        checkBombCollision(
+          this.xpos + xroom * 16 * 16,
+          this.ypos + yroom * 11 * 16,
+        )
+      ) {
+        this.die(level);
+        game.handleDeath();
+      }
+
+      // Check if any parrot should die (note only visible parrots can die)
+      const { parrots } = bombRoom;
+      parrots?.forEach((parrot) => {
+        if (
+          checkBombCollision(
+            parrot.xpos + xroom * 16 * 16,
+            parrot.ypos + yroom * 11 * 16,
+          )
+        ) {
+          game.score += 1500;
+          parrot.die(level);
+        }
+      });
     }
   }
 

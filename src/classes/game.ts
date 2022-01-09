@@ -20,17 +20,6 @@ import { tiles } from "../data/tiles";
 
 sound.volumeAll = 0.4;
 
-const bombAlert = Sound.from({
-  url: "assets/bomb-alert.mp3",
-  sprites: {
-    alert: {
-      start: 0,
-      end: 12,
-    },
-  },
-});
-bombAlert.loop = true;
-
 const soundTick = Sound.from({
   url: "assets/tick.mp3",
 });
@@ -111,15 +100,11 @@ export class Game {
   async handleDeath() {
     this.lives--;
 
-    const scoreBar = this.scoreBar;
-
-    scoreBar.update({
-      score: this.score,
-      time: this.time,
-      carrots: this.numCarrots,
+    this.scoreBar.update({
       lives: this.lives,
-      bomb: 0,
     });
+
+    this.player.cleanBomb();
 
     this.level = void 0;
 
@@ -141,7 +126,6 @@ export class Game {
 
   async nextLevel(levelIndex: number) {
     const player = this.player;
-    player.status = Status.STANDING;
 
     this.levelContainer.removeChildren();
     player.remove(this.levelContainer);
@@ -153,17 +137,13 @@ export class Game {
         this.time--;
 
         this.scoreBar.update({
-          score: this.score,
           time: this.time,
-          carrots: this.numCarrots,
-          lives: this.lives,
-          bomb: 0,
         });
 
         if (this.time <= 30) {
           soundTick.play();
         }
-        if (this.time <= 0) {
+        if (this.time < 0) {
           this.timeTimer && clearInterval(this.timeTimer);
           player.die(this.level);
           this.handleDeath();
@@ -191,14 +171,14 @@ export class Game {
         startPos: { x: 10, y: 10 },
         startRoom: { x: 0, y: 0 },
       },
-*/
+     */
       levels[levelIndex],
     ));
 
     level.add(this.levelContainer);
     player.add(this.levelContainer);
 
-    player.pixiSprite.visible = true;
+    player.start(level);
 
     this.numCarrots = level.numCarrots;
 
@@ -226,7 +206,6 @@ export class Game {
     window.addEventListener("keyup", keyUpHandler);
 
     let lastDirection: Direction;
-    let bombEnd: number = 0;
 
     const keyDownHandler = async (evt: KeyboardEvent) => {
       keys[evt.keyCode] = true;
@@ -260,15 +239,11 @@ export class Game {
           } else {
             if (material == TileType.BOMB) {
               room.replaceTile(tileIndex, 0x00);
-              player.grabBomb();
-
-              bombAlert.play("alert");
-
-              bombEnd =
-                Date.now() +
+              player.grabBomb(
                 this.bombTimes[this.levelIndex][
                   this.level.xroom + this.level.yroom * 2
-                ][tileIndex];
+                ][tileIndex],
+              );
             }
           }
         }
@@ -293,27 +268,6 @@ export class Game {
 
     const gameLoop = async (delta: number) => {
       if (this.level) {
-        // TODO: Move to player
-        if (bombEnd) {
-          const bombTime = bombEnd - Date.now();
-          const t = bombTime / 10000;
-          bombAlert.speed = t * 1 + (1 - t) * 3.5;
-
-          if (bombTime <= 0) {
-            bombAlert.stop();
-            bombEnd = 0;
-            player.explodeBomb(this);
-          }
-
-          this.scoreBar.update({
-            score: this.score,
-            time: this.time,
-            carrots: this.numCarrots,
-            lives: this.lives,
-            bomb: Math.max(bombTime, 0),
-          });
-        }
-
         const xtile = Math.floor((player.xpos + 8) / 16);
         const ytile = Math.floor(player.ypos / 16);
 
@@ -330,11 +284,7 @@ export class Game {
           this.score += 450;
 
           this.scoreBar.update({
-            score: this.score,
-            time: this.time,
             carrots: this.numCarrots,
-            lives: this.lives,
-            bomb: 0,
           });
 
           // If carrot counter == 0, level completed.

@@ -1,7 +1,7 @@
 # Fluffy!
 
 Fluffy! was a game for Spectravideo 328 created by JTM Software.
-This game has one of the best graphics seen on the SVI328. The game itself is a platform/puzzle game which really well designed levels and increadible difficulty, but nevertheless a lot of fun to play.
+This game has one of the best graphics seen on the SVI328. The game itself is a platform/puzzle game which has really well designed levels and increadible difficulty, but nevertheless a lot of fun to play.
 Sadly this game did not gain a lot of recognition outside from Sweden, so this is a port to javascript
 so that the game can be played by anyone on a standard browser.
 

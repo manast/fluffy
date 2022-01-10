@@ -4887,7 +4887,7 @@ pixi-spine@^3.0.13:
     "@pixi-spine/runtime-3.8" "~3.0.13"
     "@pixi-spine/runtime-4.0" "~3.0.13"
 
-pixi.js@^6.1.3:
+pixi.js@^6.2.1:
   version "6.2.1"
   resolved "https://registry.yarnpkg.com/pixi.js/-/pixi.js-6.2.1.tgz#97361731cf20dfa9a403fae8f26f8a69c8a4dcd0"
   integrity sha512-oZaa4QAkzcYnXRBH3O8u2LuUVO6gTPKSZijZIYhv6+EDBULZvPxlOZf7jFQNpXVgKAXhptQmOytO1LnWMuK2Sg==
